@@ -72,9 +72,7 @@ contract ConfidentialAirdrop is Ownable, ReentrancyGuard, Pausable {
      * @notice Create a new confidential airdrop campaign.
      * @param confidentialToken Address of the ConfidentialWrapper token to distribute.
      * @param recipients        Array of recipient wallet addresses.
-     * @param encAllocations    Array of encrypted uint64 allocations (one per recipient).
-     *                          Each euint64 must be created client-side via TFHE.asEuint64()
-     *                          and passed through FHEVM's encrypted input pipeline.
+     * @param allocationsList   Array of uint64 allocations (one per recipient) to be encrypted on-chain.
      * @param deadline          Unix timestamp after which no more claims are accepted.
      * @param title             Human-readable name for this drop (public).
      * @param description       Short description (public).
@@ -85,14 +83,14 @@ contract ConfidentialAirdrop is Ownable, ReentrancyGuard, Pausable {
     function createDrop(
         address confidentialToken,
         address[] calldata recipients,
-        euint64[] calldata encAllocations,
+        uint64[] calldata allocationsList,
         uint256 deadline,
         string calldata title,
         string calldata description
     ) external whenNotPaused nonReentrant returns (uint256 dropId) {
         require(confidentialToken != address(0), "Invalid token");
         require(recipients.length > 0, "No recipients");
-        require(recipients.length == encAllocations.length, "Length mismatch");
+        require(recipients.length == allocationsList.length, "Length mismatch");
         require(recipients.length <= MAX_RECIPIENTS_PER_DROP, "Too many recipients");
         require(deadline > block.timestamp + MIN_DEADLINE_DURATION, "Deadline too soon");
         require(bytes(title).length > 0, "Title required");
@@ -113,10 +111,11 @@ contract ConfidentialAirdrop is Ownable, ReentrancyGuard, Pausable {
         // Store encrypted allocation for each recipient
         for (uint256 i = 0; i < recipients.length; i++) {
             require(recipients[i] != address(0), "Invalid recipient address");
-            allocations[dropId][recipients[i]] = encAllocations[i];
+            euint64 encAllocation = TFHE.asEuint64(allocationsList[i]);
+            allocations[dropId][recipients[i]] = encAllocation;
             // Allow recipient to read their own allocation
-            TFHE.allow(encAllocations[i], recipients[i]);
-            TFHE.allowThis(encAllocations[i]);
+            TFHE.allow(encAllocation, recipients[i]);
+            TFHE.allowThis(encAllocation);
         }
 
         emit DropCreated(dropId, msg.sender, confidentialToken, recipients.length, deadline, title);

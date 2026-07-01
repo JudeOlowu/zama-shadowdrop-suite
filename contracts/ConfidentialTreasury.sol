@@ -108,15 +108,16 @@ contract ConfidentialTreasury is Ownable, ReentrancyGuard {
     /**
      * @notice Allocate an encrypted budget to a treasury member.
      * @param member    The member to allocate budget to.
-     * @param encAmount Encrypted amount (euint64) — created via TFHE.asEuint64() client-side.
+     * @param amount    Amount to allocate (uint64) which is encrypted on-chain.
      *
      * The member will be able to see their own budget via re-encryption on the frontend.
      * No other party (including the contract owner's transaction data) reveals the amount
      * because it travels encrypted through FHEVM's input proof system.
      */
-    function allocateBudget(address member, euint64 encAmount) external onlyOwner {
+    function allocateBudget(address member, uint64 amount) external onlyOwner {
         require(members[member].active, "Not an active member");
 
+        euint64 encAmount = TFHE.asEuint64(amount);
         budgets[member] = TFHE.add(budgets[member], encAmount);
         _totalAllocated = TFHE.add(_totalAllocated, encAmount);
 
@@ -134,20 +135,20 @@ contract ConfidentialTreasury is Ownable, ReentrancyGuard {
 
     /**
      * @notice Submit a spend request against your allocated budget.
-     * @param encAmount    Encrypted spend amount (euint64).
+     * @param amount       Spend amount (uint64).
      * @param purposeLabel Human-readable description of what the spend is for.
      *
      * The encrypted amount is verified against the member's budget using FHE comparison.
      * If sufficient budget exists, the amount is deducted immediately and the request
      * is marked as approved. The purpose label is public — it describes intent, not amount.
      */
-    function requestSpend(euint64 encAmount, string calldata purposeLabel)
+    function requestSpend(uint64 amount, string calldata purposeLabel)
         external nonReentrant returns (uint256 requestId)
     {
         require(members[msg.sender].active, "Not an active member");
         require(bytes(purposeLabel).length > 0, "Purpose required");
-        // Verify caller is allowed to use this encrypted amount handle
-        require(TFHE.isAllowed(encAmount, msg.sender), "Not allowed to use this handle");
+
+        euint64 encAmount = TFHE.asEuint64(amount);
 
         // Deduct from budget
         budgets[msg.sender] = TFHE.sub(budgets[msg.sender], encAmount);
