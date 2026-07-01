@@ -12,10 +12,17 @@ const TREASURY_ABI = [
     outputs: [],
   },
   {
+    name: 'allocateBudget',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [{ name: 'member', type: 'address' }, { name: 'amount', type: 'uint64' }],
+    outputs: [],
+  },
+  {
     name: 'requestSpend',
     type: 'function',
     stateMutability: 'nonpayable',
-    inputs: [{ name: 'encAmount', type: 'uint64' }, { name: 'purposeLabel', type: 'string' }],
+    inputs: [{ name: 'amount', type: 'uint64' }, { name: 'purposeLabel', type: 'string' }],
     outputs: [{ name: 'requestId', type: 'uint256' }],
   },
   {
@@ -132,6 +139,20 @@ export default function TreasuryPage() {
       args: [encAmount, spendForm.purpose],
     });
     toast.loading('Submitting spend request...');
+  };
+
+  const [budgetForm, setBudgetForm] = useState({ address: '', amount: '' });
+
+  const handleAllocateBudget = () => {
+    if (!budgetForm.address || !budgetForm.amount) return;
+    const amountVal = BigInt(Math.floor(parseFloat(budgetForm.amount) * 1e6));
+    writeContract({
+      address: CONTRACTS.TREASURY,
+      abi: TREASURY_ABI,
+      functionName: 'allocateBudget',
+      args: [budgetForm.address as `0x${string}`, amountVal],
+    });
+    toast.success('Budget allocated!');
   };
 
   const tabs = [
@@ -288,6 +309,26 @@ export default function TreasuryPage() {
                 <button className="btn btn-primary" onClick={handleAddMember}
                   disabled={isPending || !addMemberForm.address || !addMemberForm.role}>
                   {isPending ? <span className="spinner" /> : '+ Add Member'}
+                </button>
+              </div>
+            </div>
+
+            <div className="card">
+              <h3 style={{ marginBottom: '1.25rem' }}>Allocate Budget</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '1rem', alignItems: 'flex-end' }}>
+                <div className="form-group">
+                  <label>Member Address</label>
+                  <input className="input" placeholder="0x..." value={budgetForm.address}
+                    onChange={e => setBudgetForm(p => ({ ...p, address: e.target.value }))} />
+                </div>
+                <div className="form-group">
+                  <label>Budget Amount (cSTT)</label>
+                  <input className="input" type="number" placeholder="0" value={budgetForm.amount}
+                    onChange={e => setBudgetForm(p => ({ ...p, amount: e.target.value }))} />
+                </div>
+                <button className="btn btn-primary" onClick={handleAllocateBudget}
+                  disabled={isPending || !budgetForm.address || !budgetForm.amount}>
+                  {isPending ? <span className="spinner" /> : '🔒 Allocate Budget'}
                 </button>
               </div>
             </div>
