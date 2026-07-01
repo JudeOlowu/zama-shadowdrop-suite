@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { useDropzone } from 'react-dropzone';
 import Papa from 'papaparse';
 import toast from 'react-hot-toast';
@@ -56,7 +56,6 @@ function shortenAddr(addr: string) {
 }
 
 export default function AirdropPage() {
-  const { isConnected } = useAccount();
   const [step, setStep] = useState<Step>('upload');
   const [recipients, setRecipients] = useState<Recipient[]>([]);
   const [form, setForm] = useState({ title: '', description: '', token: '', days: '30' });
@@ -76,7 +75,7 @@ export default function AirdropPage() {
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
-      complete: (results) => {
+      complete: (results: any) => {
         const rows = results.data as any[];
         const parsed: Recipient[] = rows
           .filter(r => r.address && r.amount)

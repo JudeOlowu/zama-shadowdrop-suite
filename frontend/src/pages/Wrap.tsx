@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { useAccount, useReadContract, useWriteContract } from 'wagmi';
 import { parseUnits } from 'viem';
 import toast from 'react-hot-toast';
 import { CONTRACTS } from '../config';
@@ -54,6 +54,16 @@ const ERC20_ABI = [
     stateMutability: 'nonpayable',
     inputs: [{ name: 'spender', type: 'address' }, { name: 'amount', type: 'uint256' }],
     outputs: [{ type: 'bool' }],
+  },
+] as const;
+
+const MOCK_TOKEN_ABI = [
+  {
+    name: 'faucet',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [],
+    outputs: [],
   },
 ] as const;
 
@@ -140,6 +150,15 @@ export default function WrapPage() {
     toast.success('Step 1/2: Approval submitted — then wrap will execute');
   };
 
+  const handleFaucet = () => {
+    writeContract({
+      address: CONTRACTS.MOCK_TOKEN,
+      abi: MOCK_TOKEN_ABI,
+      functionName: 'faucet',
+    });
+    toast.success('Faucet mint request submitted!');
+  };
+
   return (
     <div className="page">
       <div className="container">
@@ -177,6 +196,22 @@ export default function WrapPage() {
             </div>
           </div>
         </div>
+
+        {isConnected && (
+          <div className="card card-glass" style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', padding: '1.25rem' }}>
+            <div>
+              <h4 style={{ margin: 0, fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                🚰 Faucet: ShadowTestToken (STT)
+              </h4>
+              <p style={{ margin: '0.25rem 0 0', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                Get 10,000 free STT tokens instantly to test wrapping and shielding.
+              </p>
+            </div>
+            <button className="btn btn-secondary" onClick={handleFaucet}>
+              🎁 Claim 10k STT
+            </button>
+          </div>
+        )}
 
         {/* Wrap Panel */}
         {isConnected && (allWrappers as any[])?.length > 0 && (
